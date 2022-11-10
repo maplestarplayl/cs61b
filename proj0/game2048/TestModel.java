@@ -138,22 +138,22 @@ public class TestModel extends TestUtils {
     /** Checks that a tile only merges once per tilt. */
     public void testSingleMergeEast() {
         int[][] before = new int[][]{
+                {0, 0, 0, 2},
+                {0, 0, 0, 2},
                 {0, 0, 0, 0},
-                {0, 0, 0, 0},
-                {0, 0, 0, 0},
-                {4, 0, 2, 2},
+                {0, 0, 0, 4},
         };
         int[][] after = new int[][]{
+                {0, 0, 0, 4},
+                {0, 0, 0, 4},
                 {0, 0, 0, 0},
                 {0, 0, 0, 0},
-                {0, 0, 0, 0},
-                {0, 0, 4, 4},
         };
         updateModel(before, 0, 0, false);
         String prevBoard = model.toString();
-        boolean changed = model.tilt(Side.EAST);
-        checkChanged(Side.EAST, true, changed);
-        checkModel(after, 4, 0, prevBoard, Side.EAST);
+        boolean changed = model.tilt(Side.NORTH);
+        checkChanged(Side.NORTH, true, changed);
+        checkModel(after, 4, 0, prevBoard, Side.NORTH);
     }
 
     @Test
@@ -597,17 +597,17 @@ public class TestModel extends TestUtils {
                 {0, 4, 0, 0},
         };
         int[][] after = new int[][]{
-                {0, 0, 0, 0},
-                {0, 0, 0, 0},
                 {0, 2, 0, 0},
                 {0, 4, 0, 0},
+                {0, 0, 0, 0},
+                {0, 0, 0, 0},
         };
 
         updateModel(before, 0, 0, false);
         String prevBoard = model.toString();
-        boolean changed = model.tilt(Side.SOUTH);
-        checkChanged(Side.SOUTH, true, changed);
-        checkModel(after, 0, 0, prevBoard, Side.SOUTH);
+        boolean changed = model.tilt(Side.NORTH);
+        checkChanged(Side.NORTH, true, changed);
+        checkModel(after, 0, 0, prevBoard, Side.NORTH);
     }
 
     @Test

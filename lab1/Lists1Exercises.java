@@ -1,37 +1,44 @@
 /** Class that prints the Collatz sequence starting from a given number.
  *  @author YOUR NAME HERE
  */
-public class BreakContinue {
-    public static void windowPosSum(int[] a, int n) {
-        for (int i = 0; i <= a.length - 1 ; i++)
+public class Lists1Exercises {
+    /** Returns an IntList identical to L, but with
+     * each element incremented by x. L is not allowed
+     * to change. */
+    public static IntList incrList(IntList L, int x) {
+        /* Your code here. */
+        if (L.rest == null)
         {
-            if (a[i] > 0 && i+n <= a.length - 1 )
-            {
-                for (int j = i+1;j<=i+n ; j++)
-                {
-                    a[i] = a[i] + a[j];
-                }
-            }
-            else if (a[i] < 0)
-            {
-                continue;
-            }
-            else if (a[i] > 0 && i + n > a.length - 1)
-            {
-                for(int k = i+1;k<=a.length-1;k++)
-                {
-                    a[i] = a[i] +a[k];
-                }
-            }
+            return new IntList(L.first+x,null);
         }
+
+        return new IntList(L.first+x,incrList(L.rest,x));
+    }
+
+    /** Returns an IntList identical to L, but with
+     * each element incremented by x. Not allowed to use
+     * the 'new' keyword. */
+    public static IntList dincrList(IntList L, int x) {
+        /* Your code here. */
+        return L;
     }
 
     public static void main(String[] args) {
-        int[] a = {1, 2, -3, 4, 5, 4};
-        int n = 3;
-        windowPosSum(a, n);
+        IntList L = new IntList(15, null);
+        System.out.println(L.size());
+        System.out.println(L.iterativeSize());
+        L = new IntList(10, L);
+        L = new IntList(5, L);
+        IntList M = incrList(L,1);
 
-        // Should print 4, 8, -3, 13, 9, 4
-        System.out.println(java.util.Arrays.toString(a));
+        System.out.println(M.iterativeSize());
+
+        // Test your answers by uncommenting. Or copy and paste the
+        // code for incrList and dincrList into IntList.java and
+        // run it in the visualizer.
+        // System.out.println(L.get(1));
+        // System.out.println(incrList(L, 3));
+        // System.out.println(dincrList(L, 3));
     }
 }
+

@@ -5,7 +5,7 @@ import java.util.Observable;
 
 
 /** The state of a game of 2048.
- *  @author TODO: YOUR NAME HERE
+ *  @author Li Feng
  */
 public class Model extends Observable {
     /** Current contents of the board. */
@@ -109,16 +109,62 @@ public class Model extends Observable {
     public boolean tilt(Side side) {
         boolean changed;
         changed = false;
+        board.setViewingPerspective(side);
+        int size = this.board.size();
+        int [] array = new int[size*size];
 
+
+        for (int row = size -1;row >= 0;row -= 1 )
+        {
+            for (int col = 0; col < size; col +=1)
+            {
+                Tile curr = this.board.tile(col, row);
+                if ( row + 1 == size || curr== null)
+                {
+                    continue;
+                }
+                int HighIndex = CheckHighestNull(this.board,col,row,size);
+                if ( HighIndex != 100)
+                {
+                    this.board.move(col,HighIndex,curr);
+                    changed = true;
+                    curr = this.board.tile(col,HighIndex);
+                }
+                if (HighIndex == size -1 )
+                {
+                    continue;
+                }
+                Tile up = this.board.tile(col,curr.row()+1);
+                if ( up.value() == curr.value() && array[size*(size-2-curr.row())+col+1] != 1)
+                {
+                    this.board.move(col,curr.row()+1,curr);
+                    this.score += 2*curr.value();
+                    changed = true;
+                    array[size*(size-2-curr.row())+col+1] = 1;
+                }
+            }
+
+        }
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
-
+        board.setViewingPerspective(Side.NORTH);
         checkGameOver();
         if (changed) {
             setChanged();
         }
         return changed;
+    }
+    public int  CheckHighestNull(Board b,int col,int row,int size)
+    {
+        for(int r = size -1;r > row; r -= 1)
+        {
+            if (b.tile(col,r) == null)
+            {
+                return r;
+            }
+        }
+        return 100;
     }
 
     /** Checks if the game is over and sets the gameOver variable
@@ -138,6 +184,22 @@ public class Model extends Observable {
      * */
     public static boolean emptySpaceExists(Board b) {
         // TODO: Fill in this function.
+        int cout = 0;
+        int size = b.size();
+        for (int col = 0;col <size;col += 1)
+        {
+            for (int row = 0; row < size; row += 1)
+            {
+                if (b.tile(col,row) == null)
+                {
+                    cout += 1;
+                }
+            }
+        }
+        if (cout >= 1)
+        {
+            return true;
+        }
         return false;
     }
 
@@ -148,6 +210,19 @@ public class Model extends Observable {
      */
     public static boolean maxTileExists(Board b) {
         // TODO: Fill in this function.
+        int size = b.size();
+        for (int col = 0;col < size;col += 1 )
+        {
+            for (int row = 0; row < size; row +=1)
+            {
+                if (b.tile(col,row) != null && b.tile(col,row).value() == MAX_PIECE)
+                {
+                    return true;
+                }
+            }
+
+        }
+
         return false;
     }
 
@@ -159,7 +234,31 @@ public class Model extends Observable {
      */
     public static boolean atLeastOneMoveExists(Board b) {
         // TODO: Fill in this function.
+        int size = b.size();
+        if (emptySpaceExists(b))
+        {
+            return true;
+        }
+        for (int col = 0;col < size;col += 1 )
+        {
+            for (int row = 0; row < size; row +=1)
+            {
+               int v = b.tile(col,row).value();
+               if ( v == Really(col+1,row,size,b) || v ==Really(col,row+1,size,b)|| v==Really(col-1,row,size,b)|| v==Really(col,row-1,size,b) )
+               {
+                   return true;
+               }
+            }
+
+        }
         return false;
+    }
+    public static int  Really(int col,int row,int size,Board b) {
+        if (col <= size-1 && row <= size-1 && col >= 0 && row >= 0)
+        {
+            return b.tile(col,row).value();
+        }
+        return 10086;
     }
 
 
