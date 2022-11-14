@@ -1,13 +1,11 @@
 package randomizedtest;
-
-import edu.princeton.cs.introcs.StdRandom;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import timingtest.AList;
+import edu.princeton.cs.introcs.StdRandom;
 
-/**
- * Created by hug.
- */
-public class TestBuggyAList {
+import static org.junit.Assert.assertEquals;
+
+public  class randomizedTest {
     @Test
     public void test1()
     {
@@ -16,7 +14,7 @@ public class TestBuggyAList {
 
         int N = 500;
         for (int j = 0;j < 500;j++){
-            int operationNumber = edu.princeton.cs.introcs.StdRandom.uniform(0, 4);
+            int operationNumber = StdRandom.uniform(0, 4);
 
             if (operationNumber == 0) {
                 // addLast
@@ -47,6 +45,5 @@ public class TestBuggyAList {
 
         }
     }
-w
-    // YOUR TESTS HERE
+
 }
