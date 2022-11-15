@@ -184,7 +184,9 @@ public class ArrayDeque<SomeKind> {
     }
     public SomeKind get(int index)
     {
-        return items[items.length/2 - leftsize +index + 1];
+        int index1 = returnFirstIndex(items);
+        return items[index+index1];
+
     }
 
 
