@@ -8,10 +8,10 @@ public class MyownTest {
     public void test1()
     {
         LinkedListDeque<Integer> L = new LinkedListDeque<>(1);
-        ArrayDeque<Integer> M = new ArrayDeque<>();
+        ArrayDeque<Integer> M = new ArrayDeque<Integer>();
         int N = 500;
         for (int j = 0;j < 500;j++){
-            int operationNumber = edu.princeton.cs.introcs.StdRandom.uniform(0, 5);
+            int operationNumber = edu.princeton.cs.introcs.StdRandom.uniform(0, 6);
 
             if (operationNumber == 0) {
                 // addLast
@@ -40,6 +40,8 @@ public class MyownTest {
                 L.addFirst(randVal);
                 M.addFirst(randVal);
                 System.out.println("addFirst(" + randVal + ")");
+            }else if (operationNumber == 5){
+                L.printDeque();
             }
 
         }

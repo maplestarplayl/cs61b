@@ -1,7 +1,9 @@
 package deque;
 
-public class LinkedListDeque<SomeKind> {
-    private class StuffNode
+import java.util.Iterator;
+
+public class LinkedListDeque<SomeKind> implements Deque<SomeKind>, Iterable<SomeKind> {
+    private  class StuffNode
     {
         public SomeKind item;
         public StuffNode before;
@@ -27,9 +29,9 @@ public class LinkedListDeque<SomeKind> {
 
     public LinkedListDeque(SomeKind x)
     {
-        sentFront = new StuffNode(x,null,null);
+        sentFront = new StuffNode(null,null,null);
         sentFront.next = new StuffNode(x,sentFront,null);
-        sentBack = new StuffNode(x,null,null);
+        sentBack = new StuffNode(null,null,null);
         sentBack.next = sentFront.next;
         size = 1;
     }
@@ -67,14 +69,9 @@ public class LinkedListDeque<SomeKind> {
             size += 1;
         }
     }
-
-    public boolean isEmpty()
+    public int getIndex(SomeKind x)
     {
-        if (size == 0)
-        {
-            return true;
-        }
-        return false;
+        return 100;
     }
 
     public int size()
@@ -150,15 +147,66 @@ public class LinkedListDeque<SomeKind> {
         return p.next.item;
     }
 
-    public void getRecursive(int index)
+    public void printDeque()
     {
-        // i don not know
+        StuffNode p = sentFront;
+        while (p.next != null)
+        {
+            System.out.print(p.next.item + " ");
+            p = p.next;
+        }
+        System.out.println();
     }
 
+    public Iterator<SomeKind> iterator() {
+        return new LinkedListIterator();
+    }
 
+    private class LinkedListIterator implements Iterator<SomeKind> {
+        private int wizPos;
+        private LinkedListIterator() {
+            wizPos = 0;
+        }
 
+        public boolean hasNext() {
+            return wizPos < size;
+        }
 
-
-
-
+        public SomeKind next() {
+            SomeKind item = get(wizPos);
+            wizPos += 1;
+            return item;
+        }
+    }
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null) {
+            return false;
+        }
+        if (!(o instanceof Deque)) {
+            return false;
+        }
+        Deque<SomeKind> ol = (Deque<SomeKind>) o;
+        if (ol.size() != this.size()) {
+            return false;
+        }
+        for (int i = 0; i < size; i++) {
+            if (!(ol.get(i).equals(this.get(i)))) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
+
+
+
+
+
+
+
+
+
+

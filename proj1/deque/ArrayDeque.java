@@ -1,44 +1,87 @@
 package deque;
 
-public class ArrayDeque<SomeKind> {
-    private SomeKind[] items;
-    private int leftsize;
-    private int rightsize;
+import java.util.Iterator;
 
+public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
+    private T[] items;
+    private int size;
+    private int nextFirst;
+    private int nextLast;
 
-    public ArrayDeque()
-    {
-        items = (SomeKind[])  new Object[8];
-        leftsize = 0;
-        rightsize = 0;
+    public ArrayDeque() {
+        items = (T[]) new Object[8];
+        size = 0;
+        nextFirst = 4;
+        nextLast = 5;
     }
 
-    private void resize (int capacity)
-    {
-        int totalsize = leftsize + rightsize;
-        SomeKind[] a = (SomeKind[]) new Object[capacity];
-        if (leftsize == 0 & rightsize != 0)
-        {
-            int j = returnFirstIndex(items);
-            for (int i = capacity / 2 + returnFirstIndex(items) - items.length / 2 ; i <= totalsize;i++,j++)
-            {
-                a[i] = items[j];
-            }
-            items = a;
+    private void resize(int capacity) {
+        T[] a = (T[]) new Object[capacity];
+        int ind = 0;
+        for (int i = 0; i < size; i += 1) {
+            ind = arrayInd(i);
+            a[capacity / 4 + i] = items[ind];
         }
-        else {
-            for (int i = capacity / 2 - leftsize, j = returnFirstIndex(items); i < totalsize+capacity / 2 - leftsize; i++, j++) {
-                a[i] = items[j];
-            }
-            items = a;
+        items = a;
+        nextFirst = capacity / 4 - 1;
+        nextLast = nextFirst + size + 1;
+    }
+
+    private int arrayInd(int ind) {
+        if (nextFirst + 1 + ind >= items.length) {
+            return nextFirst + 1 + ind - items.length;
+        } else {
+            return nextFirst + 1 + ind;
+        }
+    }
+
+    public void addFirst(T item) {
+        if (size == items.length - 2) {
+            resize((int) (items.length * 2));
         }
 
+        items[nextFirst] = item;
+        if (nextFirst == 0) {
+            nextFirst = items.length - 1;
+        } else {
+            nextFirst -= 1;
+        }
+        size = size + 1;
     }
-    private int returnFirstIndex(SomeKind[] items)
-    {
-        for (int i = 0; i < items.length ;i++)
+
+    public void addLast(T item) {
+        if (size == items.length - 2) {
+            resize((int) (items.length * 2));
+        }
+
+        items[nextLast] = item;
+        if (nextLast == items.length - 1) {
+            nextLast = 0;
+        } else {
+            nextLast += 1;
+        }
+        size = size + 1;
+    }
+
+    private T getFirst() {
+        int ind = arrayInd(0);
+        return items[ind];
+    }
+
+    private T getLast() {
+        int ind = arrayInd(size - 1);
+        return items[ind];
+    }
+
+    public T get(int i) {
+        int ind = arrayInd(i);
+        return items[ind];
+    }
+
+    public int getIndex(T x){
+        for (int i = 0 ;i < size;i++)
         {
-            if (items[i] != null)
+            if (get(i) == x)
             {
                 return i;
             }
@@ -46,150 +89,94 @@ public class ArrayDeque<SomeKind> {
         return -1;
     }
 
-    public void addFirst(SomeKind x)
-    {
-        if (leftsize + rightsize == 0)
-        {
-            items[items.length/2 - 1] = x;
-            return;
-        }
+    public int size() {
+        return size;
+    }
 
-        else if (leftsize == 0 &rightsize != 0 & items[items.length/2] == null)
-        {
-            int index = returnFirstIndex(items);
-            items[index - 1] = x;
-            rightsize += 1;
+    public T removeFirst() {
+        if (isEmpty()) {
+            return null;
         }
+        if ((size < items.length / 4) && (size > 8)) {
+            resize(items.length / 2);
+        }
+        T item = getFirst();
+        int ind = arrayInd(0);
+        items[ind] = null;
+        size = size - 1;
+        nextFirst = ind;
+        return item;
+    }
 
+    public T removeLast() {
+        if (isEmpty()) {
+            return null;
+        }
+        if ((size < items.length / 4) && (size > 8)) {
+            resize(items.length / 2);
+        }
+        T item = getLast();
+        int ind = arrayInd(size - 1);
+        items[ind] = null;
+        size = size - 1;
+        nextLast = ind;
+        return item;
+    }
 
-        else if (leftsize == items.length / 2)
-        {
-            resize(items.length *2);
-            items[items.length - leftsize - 1] = x;
-            leftsize += 1;
-        }
-        else if (items[items.length / 2 -leftsize ] == null)
-        {
-            items[items.length / 2 -leftsize ] = x;
-            leftsize += 1;
-        }
-        else
-        {
-            items[items.length / 2 -leftsize -1] = x;
-            leftsize += 1;
+    public void printDeque() {
+        for (T i : this) {
+            System.out.print(i + " ");
         }
     }
 
-    public void addLast (SomeKind x)
-    {
-        if (leftsize + rightsize == 0)
-        {
-            items[items.length/2] = x;
-            return;
-        }
-
-
-        else if (rightsize == 0 && leftsize != 0 && items[items.length/2 -1] == null)
-        {
-            int index = returnFirstIndex(items);
-            items[index+leftsize] = x;
-            leftsize += 1;
-        }
-
-        else if (rightsize == items.length / 2)
-        {
-            resize(items.length *2);
-            items[items.length/2 + rightsize ] = x;
-            rightsize += 1;
-        }
-        else if (items[items.length / 2 + rightsize -1] == null)
-        {
-            items[items.length / 2 + rightsize -1] = x;
-            rightsize += 1;
-        }
-        else
-        {
-            items[items.length / 2 + rightsize ] = x;
-            rightsize += 1;
-        }
+    public Iterator<T> iterator() {
+        return new ArrayDequeIterator();
     }
 
-    public boolean isEmpty()
-    {
-        if (leftsize ==0 && rightsize == 0)
-        {
+    private class ArrayDequeIterator implements Iterator<T> {
+        private int wizPos;
+
+        private ArrayDequeIterator() {
+            wizPos = 0;
+        }
+
+        public boolean hasNext() {
+            return wizPos < size;
+        }
+
+        public T next() {
+            T item = get(wizPos);
+            wizPos += 1;
+            return item;
+        }
+    }
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        return false;
-    }
-
-    public int size()
-    {
-        return leftsize + rightsize;
-    }
-
-    public SomeKind removeFirst()
-    {
-        if (leftsize + rightsize == 0)
-        {
-            return null;
+        if (o == null) {
+            return false;
         }
-        else if (leftsize == 0 && rightsize != 0)
-        {
-            int index = returnFirstIndex(items);
-            SomeKind x = items[index];
-            items[index] = null;
-            rightsize -= 1;
-            return x;
+        if (!(o instanceof Deque)) {
+            return false;
         }
-
-        else {
-            if (leftsize + rightsize <= items.length /4 && leftsize + rightsize >2)
-            {
-                resize(items.length/4);
+        Deque<T> oa = (Deque<T>) o;
+        if (oa.size() != this.size()) {
+            return false;
+        }
+        for (int i = 0; i < size; i += 1) {
+            if (!(oa.get(i).equals(this.get(i)))) {
+                return false;
             }
-            SomeKind x = items[items.length / 2 - leftsize ];
-            items[items.length / 2 - leftsize ] =null;
-            leftsize -= 1;
-            return x;
         }
-    }
-
-    public SomeKind removeLast()
-    {
-        if (leftsize + rightsize == 0)
-        {
-            return null;
-        }
-        else if (rightsize == 0 && leftsize != 0 )
-        {
-            int index = returnFirstIndex(items) + leftsize - 1;
-            SomeKind x = items[index];
-            items[index] = null;
-            leftsize -= 1;
-            return x;
-
-        }
-
-        else {
-            if (leftsize + rightsize <= items.length /4 && leftsize + rightsize >2)
-            {
-                resize(items.length/4);
-            }
-            SomeKind x = items[items.length / 2 + rightsize-1];
-            items[items.length / 2 + rightsize-1] =null;
-            rightsize -= 1;
-            return x;
-        }
-    }
-    public SomeKind get(int index)
-    {
-        int index1 = returnFirstIndex(items);
-        return items[index+index1];
-
+        return true;
     }
 
 
 
-
+    private void printArray() {
+        for (int i = 0; i < items.length; i += 1) {
+            System.out.print(items[i] + " ");
+        }
+    }
 }
