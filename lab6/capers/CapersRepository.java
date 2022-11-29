@@ -56,11 +56,11 @@ public class CapersRepository {
      */
     public static void writeStory(String text) {
         // TODO
-        File story = join(".capers","story");
-        String last = Utils.readContentsAsString(story) + "\n";
-        Utils.writeContents(story,last,text);
-        String nowToShow = Utils.readContentsAsString(story);
-        System.out.println(nowToShow);
+        File story = Utils.join(CAPERS_FOLDER, "story");
+        String oldContent = readContentsAsString(story);
+        String newContent = oldContent + text + "\n";
+        Utils.writeContents(story, newContent);
+        System.out.println(newContent);
     }
 
     /**
