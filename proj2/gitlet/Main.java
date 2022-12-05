@@ -1,5 +1,7 @@
 package gitlet;
 
+import java.io.File;
+
 /** Driver class for Gitlet, a subset of the Git version-control system.
  *  @author TODO
  */
@@ -10,15 +12,72 @@ public class Main {
      */
     public static void main(String[] args) {
         // TODO: what if args is empty?
+        if (args.length == 0) {
+            System.out.println("Please enter a command.");
+            return;
+        }
+        Repository.setupPersistence();
         String firstArg = args[0];
         switch(firstArg) {
             case "init":
                 // TODO: handle the `init` command
+                validateNumArgs(args,1);
+                if (Repository.checkIfRepository()){
+                    Utils.error("A Gitlet version-control system already exists in the current directory.");
+                    System.exit(-1);
+                }
+                Repository.init();
                 break;
             case "add":
                 // TODO: handle the `add [filename]` command
+                validateNumArgs(args,2);
+                String name = args[1];
+                validateAtaRepo();
+                Repository.add(name);
                 break;
             // TODO: FILL THE REST IN
+            case "commit":
+                if (args.length == 1){
+                    Utils.error("Please enter a commit message.");
+                    return;
+                }
+                validateNumArgs(args,2);
+                validateAtaRepo();
+                String message = args[1];
+                if (Repository.checkIfExistAdd()){
+                    System.out.println("No changes added to the commit.");
+                    return;
+                }
+                Repository.commit(message);
+                break;
+            case "log":
+                validateNumArgs(args,1);
+                validateAtaRepo();
+                Repository.log();
+            case "checkout":
+                validateAtaRepo();
+                if (args[1] == "--"){
+                    validateNumArgs(args,3);
+                    Repository.checkoutHEAD(args[2]);}
+                else if (args[2] == "--"){
+                    validateNumArgs(args,4);
+                    Repository.checkooutBeforeCommit(args[1],args[3]);
+                }
+                // to be sloved: checkout [branch name]
+        }
+    }
+
+
+
+    public static void validateNumArgs( String[] args, int n) {
+        if (args.length != n) {
+            throw new RuntimeException("Invalid operand");
+        }
+    }
+    public static void validateAtaRepo(){
+        if (!Repository.checkIfRepository()){
+            Utils.error("Not in an initialized Gitlet directory.");
+            System.exit(-2);
         }
     }
 }
