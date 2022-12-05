@@ -21,7 +21,7 @@ public class Blob implements Serializable {
     }
     public static Blob createBlob(File f){
         byte[] bytee = Utils.readContents(f);
-        String strindex = Utils.sha1(f);
+        String strindex = Utils.sha1(bytee);
         return new Blob(bytee,strindex);
 
     }

@@ -13,8 +13,7 @@ public class Main {
     public static void main(String[] args) {
         // TODO: what if args is empty?
         if (args.length == 0) {
-            System.out.println("Please enter a command.");
-            return;
+            Utils.exitWithMessage("Please enter a command.");
         }
         Repository.setupPersistence();
         String firstArg = args[0];
@@ -23,8 +22,8 @@ public class Main {
                 // TODO: handle the `init` command
                 validateNumArgs(args,1);
                 if (Repository.checkIfRepository()){
-                    Utils.error("A Gitlet version-control system already exists in the current directory.");
-                    System.exit(-1);
+                    Utils.message("A Gitlet version-control system already exists in the current directory.");
+                    return;
                 }
                 Repository.init();
                 break;
@@ -39,12 +38,13 @@ public class Main {
             case "commit":
                 if (args.length == 1){
                     Utils.error("Please enter a commit message.");
+                    System.out.println("Please enter a commit message.");
                     return;
                 }
                 validateNumArgs(args,2);
                 validateAtaRepo();
                 String message = args[1];
-                if (Repository.checkIfExistAdd()){
+                if (Repository.checkIfNotExistAdd()){
                     System.out.println("No changes added to the commit.");
                     return;
                 }
@@ -54,15 +54,22 @@ public class Main {
                 validateNumArgs(args,1);
                 validateAtaRepo();
                 Repository.log();
+                break;
             case "checkout":
                 validateAtaRepo();
-                if (args[1] == "--"){
+                if (args.length == 3 ){
                     validateNumArgs(args,3);
+                    //System.out.println("123");
                     Repository.checkoutHEAD(args[2]);}
-                else if (args[2] == "--"){
+                else if (args.length == 4){
                     validateNumArgs(args,4);
+                    //System.out.println("124");
                     Repository.checkooutBeforeCommit(args[1],args[3]);
                 }
+                //else{
+                    //System.out.println(args.length);
+                //}
+                //break;
                 // to be sloved: checkout [branch name]
         }
     }
@@ -71,13 +78,12 @@ public class Main {
 
     public static void validateNumArgs( String[] args, int n) {
         if (args.length != n) {
-            throw new RuntimeException("Invalid operand");
+            Utils.exitWithMessage("Incorrect operands.");
         }
     }
     public static void validateAtaRepo(){
         if (!Repository.checkIfRepository()){
-            Utils.error("Not in an initialized Gitlet directory.");
-            System.exit(-2);
+            Utils.exitWithMessage("Not in an initialized Gitlet directory.");
         }
     }
 }

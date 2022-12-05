@@ -78,7 +78,7 @@ public class Repository {
     public static boolean checkIfRepository(){
         return GITLET_DIR.exists();
     }
-    public static boolean checkIfExistAdd(){
+    public static boolean checkIfNotExistAdd(){
         if (Staging_add.delete()){
             Staging_add.mkdir();
             return true;
@@ -101,13 +101,17 @@ public class Repository {
         return com;
     }
     public static String addHelperGetFileIndex(String name,Commit com){
-        Map<String,String> map = com.treeDirectory.returnMap();
-        String index = map.get(name);
-        return index;
+        if (com.treeDirectory != null) {
+            Map<String, String> map = com.treeDirectory.returnMap();
+            String index = map.get(name);
+            return index;
+        }
+        return null;
     }
     public static void CommitSaveandUpdatePointer(Commit com){
-        String index = Utils.sha1(com);
+        String index = com.getHash();
         File tobesaved = Utils.join(Commitee,index);
+        Fileinitialize(tobesaved);
         Utils.writeObject(tobesaved,com);
         Utils.writeContents(HEAD,index);
         Utils.writeContents(master,index);
@@ -115,7 +119,7 @@ public class Repository {
     public static void LogHelperRecordEachCommit(Commit com){
         String identifier = "==="+"\n";
         String last = Utils.readContentsAsString(LOG);
-        String firstline = "commit" + " " + sha1(com) + "\n";
+        String firstline = "commit" + " " + com.getHash() + "\n";
         String secondline = "Data:" + com.getTimestamp()+"\n";
         String thirdline = com.getMessage();
         String finalres = last + identifier + firstline + secondline + thirdline + "\n";
@@ -134,6 +138,7 @@ public class Repository {
 
     public static void init(){
         Commit initial_commit = new Commit("initial commit",null);
+        initial_commit.calcHash();
         CommitSaveandUpdatePointer(initial_commit);
         LogHelperRecordEachCommit(initial_commit);
     }
@@ -146,10 +151,13 @@ public class Repository {
         }
         //if the file to be added is identical to the current commit,then exit
         Commit commit = returnCommitByHead();
-        String oriindex = addHelperGetFileIndex(name,commit);
-        String curindex = Utils.sha1(tobeadd);
-        if (oriindex == curindex){
-            return;
+        if (addHelperGetFileIndex(name,commit) != null) {
+            String oriindex = addHelperGetFileIndex(name, commit);
+            byte[] bytee = Utils.readContents(tobeadd);
+            String curindex = Utils.sha1(bytee);
+            if (oriindex.equals(curindex)) {
+                return;
+            }
         }
         //copy the file to the staging area
         File copyAdd = join(Staging_add,name);
@@ -170,6 +178,7 @@ public class Repository {
 
         File[] files = Staging_add.listFiles();
         now.changeTreeDirectory(files);
+        now.calcHash();
         LogHelperRecordEachCommit(now);
         CommitSaveandUpdatePointer(now);
         //clear the staging area after commit
@@ -184,35 +193,32 @@ public class Repository {
 
     public static void checkoutHEAD(String fileName){
         Commit com = returnCommitByHead();
-        Map map = com.treeDirectory.returnMap();
+        Map<String,String> map = com.treeDirectory.returnMap();
         if (map.containsKey(fileName)){
-            Blob b = Blob.returnBlobByIndex((String)map.get(fileName));
+            Blob b = Blob.returnBlobByIndex(map.get(fileName));
             File tooverride = join(CWD,fileName);
             Fileinitialize(tooverride);
             Utils.writeContents(tooverride,b.getByte());
-            return;
         }
         else {
             System.out.println("File does not exist in that commit.");
-            return;
         }
     }
     public static void checkooutBeforeCommit(String commitindex,String filename){
         Commit com = returnCommitByIndex(commitindex);
         if (com == null){
+            System.out.println("No commit with that id exists.");
             return;
         }
-        Map map = com.treeDirectory.returnMap();
+        Map<String,String> map = com.treeDirectory.returnMap();
         if (map.containsKey(filename)){
             Blob b = Blob.returnBlobByIndex((String)map.get(filename));
             File tooverride = join(CWD,filename);
             Fileinitialize(tooverride);
             Utils.writeContents(tooverride,b.getByte());
-            return;
         }
         else {
             System.out.println("File does not exist in that commit.");
-            return;
         }
 
     }
