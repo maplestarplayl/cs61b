@@ -15,7 +15,6 @@ public class Main {
         if (args.length == 0) {
             Utils.exitWithMessage("Please enter a command.");
         }
-        Repository.setupPersistence();
         String firstArg = args[0];
         switch(firstArg) {
             case "init":
@@ -25,6 +24,7 @@ public class Main {
                     Utils.message("A Gitlet version-control system already exists in the current directory.");
                     return;
                 }
+                Repository.setupPersistence();
                 Repository.init();
                 break;
             case "add":
@@ -69,8 +69,23 @@ public class Main {
                 //else{
                     //System.out.println(args.length);
                 //}
-                //break;
+                break;
                 // to be sloved: checkout [branch name]
+            case "rm":
+                validateAtaRepo();
+                validateNumArgs(args,2);
+                Repository.rm(args[1]);
+                break;
+            case "find":
+                validateNumArgs(args,2);
+                validateAtaRepo();
+                Repository.find(args[1]);
+                break;
+            case "status":
+                validateAtaRepo();
+                validateNumArgs(args,1);
+                Repository.status();
+                break;
         }
     }
 

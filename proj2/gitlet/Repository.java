@@ -1,14 +1,14 @@
 package gitlet;
 
+import javax.swing.plaf.basic.BasicInternalFrameTitlePane;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
-import java.util.Map;
+import java.util.*;
 
 import java.time.*;
 import java.time.temporal.*;
-
 
 
 import static gitlet.Utils.*;
@@ -37,6 +37,7 @@ public class Repository {
     public static final File LOG = join(GITLET_DIR,"log");
     public static final File Objects = join(GITLET_DIR,"objects");
     public static final File Staging_add = join(GITLET_DIR,"staging_add");
+    public static final File Staging_rem = join(GITLET_DIR,"staging_remove");
     public static final File Commitee = join(GITLET_DIR,"commitee");
     public static final File HEAD = join(GITLET_DIR,"head");
     public static final File master = join(GITLET_DIR,"master");
@@ -57,6 +58,9 @@ public class Repository {
             }
             if (!Staging_add.exists()) {
                 Staging_add.mkdir();
+            }
+            if (!Staging_rem.exists()){
+                Staging_rem.mkdir();
             }
             if (!HEAD.exists()){
                 HEAD.createNewFile();
@@ -135,6 +139,19 @@ public class Repository {
             System.out.println(excp.getMessage());
         }
     }
+    public static boolean checkIfFileEqualLastCommit(String name){
+        File cur = join(CWD,name);
+        Commit com = returnCommitByHead();
+        if (addHelperGetFileIndex(name,com) != null){
+            String oriindex = addHelperGetFileIndex(name, com);
+            byte[] bytee = Utils.readContents(cur);
+            String curindex = Utils.sha1(bytee);
+            if (oriindex.equals(curindex)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public static void init(){
         Commit initial_commit = new Commit("initial commit",null);
@@ -150,14 +167,8 @@ public class Repository {
             System.exit(0);
         }
         //if the file to be added is identical to the current commit,then exit
-        Commit commit = returnCommitByHead();
-        if (addHelperGetFileIndex(name,commit) != null) {
-            String oriindex = addHelperGetFileIndex(name, commit);
-            byte[] bytee = Utils.readContents(tobeadd);
-            String curindex = Utils.sha1(bytee);
-            if (oriindex.equals(curindex)) {
-                return;
-            }
+        if (checkIfFileEqualLastCommit(name)){
+            return;
         }
         //copy the file to the staging area
         File copyAdd = join(Staging_add,name);
@@ -172,17 +183,23 @@ public class Repository {
         // copy the last commit to the new commit
         Commit last = returnCommitByHead();
         Commit now = last;
-        now.parent = last;
+        now.parent = last.getHash();
         now.message = message;
         /* to be solved : the representation of timestamp */
 
         File[] files = Staging_add.listFiles();
-        now.changeTreeDirectory(files);
+        File[] files1 = Staging_rem.listFiles();
+
+        now.changeTreeDirectoryAdd(files);
+        now.changeTreeDirectoryRemove(files1);
         now.calcHash();
         LogHelperRecordEachCommit(now);
         CommitSaveandUpdatePointer(now);
         //clear the staging area after commit
         for (File file :files){
+            file.delete();
+        }
+        for (File file : files1){
             file.delete();
         }
     }
@@ -222,6 +239,103 @@ public class Repository {
         }
 
     }
+
+    public static void rm(String filename){
+        File tobedeleted = join(Staging_add,filename);
+        Commit com = returnCommitByHead();
+        Map<String,String> map1 = com.treeDirectory.returnMap();
+        if (tobedeleted.exists()){
+            tobedeleted.delete();
+        }
+        else if (map1.containsKey(filename)){
+            //map1.remove(filename);
+            //com.treeDirectory.map = map1;
+            //File commitChanged = join(Commitee,com.getHash());
+            //Utils.writeObject(commitChanged,com);
+            File tobedelete = join(CWD,filename);
+            File copyAdd = join(Staging_rem,filename);
+            try{
+                Files.copy(tobedelete.toPath(),copyAdd.toPath());
+            }catch (IOException excp){
+                System.out.println(excp.getMessage());
+            }
+            tobedelete.delete();
+        }
+        else{
+            Utils.exitWithMessage("No reason to remove the file.");
+        }
+
+    }
+
+    public static void find(String message){
+        File[] files = Commitee.listFiles();
+        int fla = 0;
+        for (File file: files){
+            String name = file.getName();
+            Commit com = returnCommitByIndex(name);
+            if (com.getMessage().equals(message)){
+                System.out.println(name);
+                fla += 1;
+            }
+        }
+        if (fla == 0){
+            System.out.println("Found no commit with that message.");
+        }
+
+    }
+
+    public static void status(){
+        List<String> cwdfilenames = new ArrayList<>() ;
+        List<String> strnames = Utils.plainFilenamesIn(CWD);
+        for (String name :strnames){
+            cwdfilenames.add(name);
+        }
+        // Branches
+        System.out.println("=== Branches ===");
+        System.out.println("*master");
+        System.out.println("");
+        //Staged files
+        System.out.println("=== Staged Files ===");
+        File[] stagedFiles = Staging_add.listFiles();
+        for (File file : stagedFiles){
+            System.out.println(file.getName());
+            cwdfilenames.remove(file.getName());
+        }
+
+        //Removed Files
+        System.out.println("=== Removed Files ===");
+        File[] removedFiles = Staging_rem.listFiles();
+        for (File file :removedFiles){
+            System.out.println(file.getName());
+        }
+
+        // Modifications Not Staged For Commit
+        System.out.println("=== Modifications Not Staged For Commit ===");
+        if (cwdfilenames != null){
+            for (int i = 0,len = cwdfilenames.size();i < len;i++){
+                String each = cwdfilenames.get(i);
+                if (checkIfFileEqualLastCommit(each)){
+                    cwdfilenames.remove(each);
+                    len -= 1;
+                    i -= 1;
+                }
+                else if (addHelperGetFileIndex(each,returnCommitByHead()) != null){
+                    cwdfilenames.remove(each);
+                    len -= 1;
+                    i -= 1;
+                    System.out.println(each);
+                }
+            }
+        }
+
+        //Untracked Files
+        System.out.println("=== Untracked Files ===");
+        for (String filename:cwdfilenames){
+            System.out.println(filename);
+        }
+    }
+
+
 
 
 
