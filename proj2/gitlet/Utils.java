@@ -1,3 +1,6 @@
+/** THis file is added by Berkeley professor Josh Hug as a tool for the convenience of avoid reading i.o official documents ，which enables us to better focus on project itself
+ * 这个文件是伯克利教授 Josh Hog 添加的，为了使我们免于阅读官方有关i.o的文档，从而可以更好的专注于项目本身
+ */
 package gitlet;
 
 import java.io.BufferedOutputStream;
