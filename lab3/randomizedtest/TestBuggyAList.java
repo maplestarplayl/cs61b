@@ -47,6 +47,5 @@ public class TestBuggyAList {
 
         }
     }
-w
     // YOUR TESTS HERE
 }

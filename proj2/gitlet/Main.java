@@ -55,6 +55,11 @@ public class Main {
                 validateAtaRepo();
                 Repository.log();
                 break;
+            case "global-log":
+                validateAtaRepo();
+                validateNumArgs(args,1);
+                Repository.globalLog();
+                break;
             case "checkout":
                 validateAtaRepo();
                 if (args.length == 3 ){
@@ -66,9 +71,10 @@ public class Main {
                     //System.out.println("124");
                     Repository.checkooutBeforeCommit(args[1],args[3]);
                 }
-                //else{
-                    //System.out.println(args.length);
-                //}
+                else if(args.length == 2){
+                    validateAtaRepo();
+                    Repository.checkoutNewBranch(args[1]);
+                }
                 break;
                 // to be sloved: checkout [branch name]
             case "rm":
@@ -85,6 +91,21 @@ public class Main {
                 validateAtaRepo();
                 validateNumArgs(args,1);
                 Repository.status();
+                break;
+            case  "branch":
+                validateAtaRepo();
+                validateNumArgs(args,2);
+                Repository.branch(args[1]);
+                break;
+            case "rm-branch":
+                validateAtaRepo();
+                validateNumArgs(args,2);
+                Repository.removeBranch(args[1]);
+                break;
+            case "reset":
+                validateAtaRepo();
+                validateNumArgs(args,1);
+                Repository.reset(args[1]);
                 break;
         }
     }

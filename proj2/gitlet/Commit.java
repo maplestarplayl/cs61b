@@ -73,6 +73,7 @@ public class Commit implements Serializable{
     public String parent;
     public TreeDirectory treeDirectory;
     public String hash;
+    //Calculate the hash value according to the current commit
     public void calcHash() {
         File f = join(Repository.GITLET_DIR,"try");
         Repository.Fileinitialize(f);
@@ -117,6 +118,7 @@ public class Commit implements Serializable{
             this.treeDirectory.RemoveFile(files);
         }
     }
+    //Remember call the method "calcHash" before this method
     public String getHash(){
         return hash;
     }

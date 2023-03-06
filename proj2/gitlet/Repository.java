@@ -1,15 +1,10 @@
 package gitlet;
 
-import javax.swing.plaf.basic.BasicInternalFrameTitlePane;
 import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
+
 import java.nio.file.Files;
 import java.util.*;
-
-import java.time.*;
-import java.time.temporal.*;
-
 
 import static gitlet.Utils.*;
 
@@ -24,7 +19,6 @@ import static gitlet.Utils.*;
 public class Repository {
     /**
      * TODO: add instance variables here.
-     *
      * List all instance variables of the Repository class here with a useful
      * comment above them describing what that variable represents and how that
      * variable is used. We've provided two examples for you.
@@ -35,13 +29,14 @@ public class Repository {
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
     public static final File LOG = join(GITLET_DIR,"log");
+    public static final File Global_Log = join(GITLET_DIR,"global_log");
     public static final File Objects = join(GITLET_DIR,"objects");
     public static final File Staging_add = join(GITLET_DIR,"staging_add");
     public static final File Staging_rem = join(GITLET_DIR,"staging_remove");
     public static final File Commitee = join(GITLET_DIR,"commitee");
     public static final File HEAD = join(GITLET_DIR,"head");
     public static final File master = join(GITLET_DIR,"master");
-    public static final File branch = join(GITLET_DIR,"branch");
+    public static final File Branches = join(GITLET_DIR,"Branches");
     /* TODO: fill in the rest of this class. */
 
 
@@ -52,6 +47,9 @@ public class Repository {
             }
             if (!LOG.exists()) {
                 LOG.createNewFile();
+            }
+            if (!Global_Log.exists()){
+                Global_Log.createNewFile();
             }
             if (!Objects.exists()) {
                 Objects.mkdir();
@@ -65,8 +63,8 @@ public class Repository {
             if (!HEAD.exists()){
                 HEAD.createNewFile();
             }
-            if (!branch.exists()){
-                branch.createNewFile();
+            if (!Branches.exists()){
+                Branches.mkdir();
             }
             if (!Commitee.exists()){
                 Commitee.mkdir();
@@ -118,16 +116,15 @@ public class Repository {
         Fileinitialize(tobesaved);
         Utils.writeObject(tobesaved,com);
         Utils.writeContents(HEAD,index);
-        Utils.writeContents(master,index);
     }
-    public static void LogHelperRecordEachCommit(Commit com){
+    public static void LogHelperRecordCommit(Commit com,File toberecord){
         String identifier = "==="+"\n";
-        String last = Utils.readContentsAsString(LOG);
+        String last = Utils.readContentsAsString(toberecord);
         String firstline = "commit" + " " + com.getHash() + "\n";
         String secondline = "Data:" + com.getTimestamp()+"\n";
         String thirdline = com.getMessage();
         String finalres = last + identifier + firstline + secondline + thirdline + "\n";
-        Utils.writeContents(LOG,finalres);
+        Utils.writeContents(toberecord,finalres);
     }
     public static void Fileinitialize(File f){
         try {
@@ -152,12 +149,23 @@ public class Repository {
         }
         return false;
     }
-
+    public static boolean checkIfAtBranch(){
+        File flag = join(GITLET_DIR,"flag");
+        Fileinitialize(flag);
+        String val = Utils.readContentsAsString(flag);
+        if (val.equals("true")){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
     public static void init(){
         Commit initial_commit = new Commit("initial commit",null);
         initial_commit.calcHash();
         CommitSaveandUpdatePointer(initial_commit);
-        LogHelperRecordEachCommit(initial_commit);
+        LogHelperRecordCommit(initial_commit,Global_Log);
+        LogHelperRecordCommit(initial_commit,LOG);
     }
     public static void add(String name){
         File tobeadd = join(CWD,name);
@@ -193,8 +201,21 @@ public class Repository {
         now.changeTreeDirectoryAdd(files);
         now.changeTreeDirectoryRemove(files1);
         now.calcHash();
-        LogHelperRecordEachCommit(now);
+        LogHelperRecordCommit(now,Global_Log);
         CommitSaveandUpdatePointer(now);
+        if (!checkIfAtBranch()){
+            LogHelperRecordCommit(now,LOG);
+            File mainpointer = master;
+            Utils.writeContents(mainpointer,now.getHash());
+        }
+        else{
+            File globalog = join(GITLET_DIR,"branchlog");
+            LogHelperRecordCommit(now,globalog);
+            File[] otherbranch = Branches.listFiles();
+            for (File file:otherbranch){
+                Utils.writeContents(file,now.getHash());
+            }
+        }
         //clear the staging area after commit
         for (File file :files){
             file.delete();
@@ -204,7 +225,18 @@ public class Repository {
         }
     }
     public static void log(){
-        String res = Utils.readContentsAsString(LOG);
+        if (!checkIfAtBranch()){
+            String res = Utils.readContentsAsString(LOG);
+            System.out.println(res);
+        }
+        else{
+            File toberead = join(GITLET_DIR,"branchlog");
+            String res = Utils.readContentsAsString(toberead);
+            System.out.println(toberead);
+        }
+    }
+    public static void globalLog(){
+        String res = Utils.readContentsAsString(Global_Log);
         System.out.println(res);
     }
 
@@ -240,6 +272,67 @@ public class Repository {
 
     }
 
+    public static void HPDeleteCWDAndReadCommit(Commit com){
+        File[] files = CWD.listFiles();
+        for (File file : files){
+            if (!file.getName().equals(".gitlet")){
+                file.delete();
+            }
+        }
+        // iterate the map returned by the head commit and save the file to the CWD
+        Map<String,String> map = com.treeDirectory.returnMap();
+        map.forEach((key,value) -> {
+            Blob b = Blob.returnBlobByIndex(value);
+            File tooverride = join(CWD,key);
+            Fileinitialize(tooverride);
+            Utils.writeContents(tooverride,b.getByte());
+        });
+
+
+    }
+
+    /* 用途 ： 切换到新的分支
+    * 实现方式： 由两部分构成，第一部分是设置flag来对是否是branch进行锚定
+    *          第二部分，将要切换的分支的节点的文件覆盖当前的文件，还要更新head指针
+     */
+    public static void checkoutNewBranch(String branchname){
+        File flag = join(GITLET_DIR,"flag");
+        Fileinitialize(flag);
+        if (!branchname.equals("master")){
+            File branch = join(Branches,branchname);
+            if (!branch.exists()){
+                Utils.exitWithMessage("No such branch exists.");
+            }
+            else if (Utils.readContentsAsString(flag).equals("true")){
+                Utils.exitWithMessage("No need to checkout the current branch.");
+            }
+            else if (!checkIfAtBranch()){
+                String index = Utils.readContentsAsString(branch);
+                HPDeleteCWDAndReadCommit(returnCommitByIndex(index));
+                Utils.writeContents(flag,"true");
+                //Update the head pointer
+                Utils.writeContents(HEAD,index);
+
+            }
+            else{
+                Utils.writeContents(flag,"true");
+
+            }
+        }
+        else{
+            if (Utils.readContentsAsString(flag).equals("false")){
+                Utils.exitWithMessage("No need to checkout the current branch.");
+            }
+            Utils.writeContents(flag,"false");
+            String index =Utils.readContentsAsString(master);
+            HPDeleteCWDAndReadCommit(returnCommitByIndex(index));
+            //Update the head pointer
+            Utils.writeContents(HEAD,index);
+        }
+
+
+    }
+
     public static void rm(String filename){
         File tobedeleted = join(Staging_add,filename);
         Commit com = returnCommitByHead();
@@ -271,11 +364,24 @@ public class Repository {
         File[] files = Commitee.listFiles();
         int fla = 0;
         for (File file: files){
-            String name = file.getName();
-            Commit com = returnCommitByIndex(name);
-            if (com.getMessage().equals(message)){
-                System.out.println(name);
-                fla += 1;
+            if (!file.isDirectory()){
+                String name = file.getName();
+                Commit com = returnCommitByIndex(name);
+                if (com.getMessage().equals(message)){
+                    System.out.println(name);
+                    fla += 1;
+                }
+            }
+            else{
+                File[] filess = file.listFiles();
+        for (File filee : filess){
+                    String name = filee.getName();
+                    Commit com = returnCommitByIndex(name);
+                    if (com.getMessage().equals(message)){
+                        System.out.println(name);
+                        fla += 1;
+                    }
+                }
             }
         }
         if (fla == 0){
@@ -335,7 +441,44 @@ public class Repository {
         }
     }
 
+    public static void branch(String branchname){
+        //创建 三个文件，flag,branch，branchlog。前者表示该branch是否激活，中者显示branch所指向的commit，后者表示该branch提交的记录
+        File flagForIfChangeBranch = join(GITLET_DIR,"flag");
+        File branch = join(Branches,branchname);
+        File branchlog = join(GITLET_DIR,"branchlog");
+        if (branch.exists()){
+            Utils.exitWithMessage("A branch with that name already exists.");
+        }
+        Fileinitialize(flagForIfChangeBranch);
+        Fileinitialize(branch);
+        Fileinitialize(branchlog);
+        // 将branch和head指向同一个commit
+        String index = returnCommitByHead().getHash();
+        Utils.writeContents(branch,index);
 
+    }
+    public static void removeBranch(String branchname){
+        File b = join(Branches,branchname);
+        if (!b.exists()){
+            Utils.exitWithMessage("A branch with that name does not exist.");
+        }
+        else if (checkIfAtBranch()){
+            Utils.exitWithMessage("Cannot remove the current branch.");
+        }
+        else{
+            b.delete();
+            File flagForIfChangeBranch = join(GITLET_DIR,"flag");
+            File branchlog = join(GITLET_DIR,"branchlog");
+            branchlog.delete();
+            flagForIfChangeBranch.delete();
+        }
+
+
+    }
+
+    public static void reset(String commitindex){
+
+    }
 
 
 

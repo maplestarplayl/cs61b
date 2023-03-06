@@ -33,9 +33,7 @@ public class Model extends Observable {
         gameOver = false;
     }
 
-    /** A new 2048 game where RAWVALUES contain the values of the tiles
-     * (0 if null). VALUES is indexed by (row, col) with (0, 0) corresponding
-     * to the bottom-left corner. Used for testing purposes. */
+    /** A new 2048 game where RAWVALUES or testing purposes. */
     public Model(int[][] rawValues, int score, int maxScore, boolean gameOver) {
         int size = rawValues.length;
         board = new Board(rawValues, score);
