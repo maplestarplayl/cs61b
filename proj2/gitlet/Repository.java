@@ -1,5 +1,7 @@
 package gitlet;
 
+import jdk.jshell.execution.Util;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -36,10 +38,10 @@ public class Repository {
     public static final File Commitee = join(GITLET_DIR,"commitee");
     public static final File HEAD = join(GITLET_DIR,"head");
     public static final File master = join(GITLET_DIR,"master");
-    public static final File Branches = join(GITLET_DIR,"Branches");
+    public static final File Branches = join(GITLET_DIR,"branches");
     /* TODO: fill in the rest of this class. */
 
-
+    /** Helper Methods */
     public static void setupPersistence() {
         try {
             if (!GITLET_DIR.exists()) {
@@ -110,7 +112,7 @@ public class Repository {
         }
         return null;
     }
-    public static void CommitSaveandUpdatePointer(Commit com){
+    public static void CommitSaveandUpdatePointer(Commit com,File f){
         String index = com.getHash();
         File tobesaved = Utils.join(Commitee,index);
         Fileinitialize(tobesaved);
@@ -149,6 +151,7 @@ public class Repository {
         }
         return false;
     }
+    /** To be sloved : Only able to process 2 branches */
     public static boolean checkIfAtBranch(){
         File flag = join(GITLET_DIR,"flag");
         Fileinitialize(flag);
@@ -160,10 +163,12 @@ public class Repository {
             return false;
         }
     }
+    /** Below are the commands gitlet supports */
+    //Initialize the repo and create the first commit
     public static void init(){
         Commit initial_commit = new Commit("initial commit",null);
         initial_commit.calcHash();
-        CommitSaveandUpdatePointer(initial_commit);
+        CommitSaveandUpdatePointer(initial_commit,HEAD);
         LogHelperRecordCommit(initial_commit,Global_Log);
         LogHelperRecordCommit(initial_commit,LOG);
     }
@@ -193,8 +198,8 @@ public class Repository {
         Commit now = last;
         now.parent = last.getHash();
         now.message = message;
-        /* to be solved : the representation of timestamp */
-
+        /** to be solved : the representation of timestamp */
+        //Deal with the files
         File[] files = Staging_add.listFiles();
         File[] files1 = Staging_rem.listFiles();
 
@@ -202,18 +207,20 @@ public class Repository {
         now.changeTreeDirectoryRemove(files1);
         now.calcHash();
         LogHelperRecordCommit(now,Global_Log);
-        CommitSaveandUpdatePointer(now);
+        CommitSaveandUpdatePointer(now,HEAD);
+        // record the commit in Log
         if (!checkIfAtBranch()){
             LogHelperRecordCommit(now,LOG);
             File mainpointer = master;
             Utils.writeContents(mainpointer,now.getHash());
         }
         else{
-            File globalog = join(GITLET_DIR,"branchlog");
-            LogHelperRecordCommit(now,globalog);
-            File[] otherbranch = Branches.listFiles();
-            for (File file:otherbranch){
+            File Branchlog = join(GITLET_DIR,"branchlog");
+            LogHelperRecordCommit(now,Branchlog);
+            File[] branch = Branches.listFiles();
+            for (File file:branch){
                 Utils.writeContents(file,now.getHash());
+                CommitSaveandUpdatePointer(now,file);
             }
         }
         //clear the staging area after commit
@@ -253,7 +260,7 @@ public class Repository {
             System.out.println("File does not exist in that commit.");
         }
     }
-    public static void checkooutBeforeCommit(String commitindex,String filename){
+    public static void checkoutBeforeCommit(String commitindex,String filename){
         Commit com = returnCommitByIndex(commitindex);
         if (com == null){
             System.out.println("No commit with that id exists.");
@@ -291,32 +298,29 @@ public class Repository {
 
     }
 
-    /* 用途 ： 切换到新的分支
+    /**用途 ： 切换到新的分支
     * 实现方式： 由两部分构成，第一部分是设置flag来对是否是branch进行锚定
     *          第二部分，将要切换的分支的节点的文件覆盖当前的文件，还要更新head指针
      */
     public static void checkoutNewBranch(String branchname){
         File flag = join(GITLET_DIR,"flag");
         Fileinitialize(flag);
+        String HeadIndex = Utils.readContentsAsString(HEAD);
         if (!branchname.equals("master")){
             File branch = join(Branches,branchname);
             if (!branch.exists()){
                 Utils.exitWithMessage("No such branch exists.");
             }
-            else if (Utils.readContentsAsString(flag).equals("true")){
+            else if (checkIfAtBranch()){
                 Utils.exitWithMessage("No need to checkout the current branch.");
             }
-            else if (!checkIfAtBranch()){
+            else {
                 String index = Utils.readContentsAsString(branch);
                 HPDeleteCWDAndReadCommit(returnCommitByIndex(index));
-                Utils.writeContents(flag,"true");
+                Utils.writeContents(flag, "true");
                 //Update the head pointer
-                Utils.writeContents(HEAD,index);
-
-            }
-            else{
-                Utils.writeContents(flag,"true");
-
+                Utils.writeContents(HEAD, index);
+                Utils.writeContents(flag, "true");
             }
         }
         else{
@@ -332,27 +336,30 @@ public class Repository {
 
 
     }
-
+    //Either remove it from the staging are or remove it from last commit
     public static void rm(String filename){
-        File tobedeleted = join(Staging_add,filename);
+        File Stagetobedeleted = join(Staging_add,filename);
         Commit com = returnCommitByHead();
         Map<String,String> map1 = com.treeDirectory.returnMap();
-        if (tobedeleted.exists()){
-            tobedeleted.delete();
+        //if the file has already been added to the staging area, just remove it from the staging area
+        if (Stagetobedeleted.exists()){
+            Stagetobedeleted.delete();
+            return;
         }
+        // add files(to be deleted) to the Staging area of remove so that status could track this
         else if (map1.containsKey(filename)){
             //map1.remove(filename);
             //com.treeDirectory.map = map1;
             //File commitChanged = join(Commitee,com.getHash());
             //Utils.writeObject(commitChanged,com);
-            File tobedelete = join(CWD,filename);
+            File CWDtobedelete = join(CWD,filename);
             File copyAdd = join(Staging_rem,filename);
             try{
-                Files.copy(tobedelete.toPath(),copyAdd.toPath());
+                Files.copy(CWDtobedelete.toPath(),copyAdd.toPath());
             }catch (IOException excp){
                 System.out.println(excp.getMessage());
             }
-            tobedelete.delete();
+            CWDtobedelete.delete();
         }
         else{
             Utils.exitWithMessage("No reason to remove the file.");
@@ -372,7 +379,7 @@ public class Repository {
                     fla += 1;
                 }
             }
-            else{
+            else{                                   // Why Commitee may have multiple structures???
                 File[] filess = file.listFiles();
         for (File filee : filess){
                     String name = filee.getName();
@@ -399,7 +406,11 @@ public class Repository {
         // Branches
         System.out.println("=== Branches ===");
         System.out.println("*master");
-        System.out.println("");
+        //Print out names of each branch
+        File[] branchfiles = Branches.listFiles();
+        for (File f: branchfiles){
+            System.out.println(f.getName());
+        }
         //Staged files
         System.out.println("=== Staged Files ===");
         File[] stagedFiles = Staging_add.listFiles();

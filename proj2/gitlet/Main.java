@@ -70,7 +70,7 @@ public class Main {
                 else if (args.length == 4){
                     validateNumArgs(args,4);
                     //System.out.println("124");
-                    Repository.checkooutBeforeCommit(args[1],args[3]);
+                    Repository.checkoutBeforeCommit(args[1],args[3]);
                 }
                 else if(args.length == 2){
                     validateAtaRepo();

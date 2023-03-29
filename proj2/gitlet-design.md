@@ -26,12 +26,17 @@
 
 ## Classes and Data Structures
 
-### Class 1
+### Class Blob
 
 #### Fields
 
-1. Field 1
-2. Field 2
+1. Field 1 :bytes 
+通过Util里的方法将blob serilization 成字节串，用于存储
+2. Field 2 :index 通过sha1算法得到该blob索引
+#### Method
+1.createBlob（File f) 传入一个文件f，调用Blob的构造函数。
+2.returnBlobByIndex(String index)根据索引找到并返回该Blob对象
+
 
 
 ### Class 2

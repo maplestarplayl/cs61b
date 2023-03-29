@@ -32,7 +32,7 @@ public class Commit implements Serializable{
         public String name;
         public Map<String,String> map = new HashMap<>();
         TreeDirectory sub;
-
+        /** Not dealing with the subDirectories */
         TreeDirectory(File[] files){
             for (File f : files){
                 Blob b = Blob.createBlob(f);
