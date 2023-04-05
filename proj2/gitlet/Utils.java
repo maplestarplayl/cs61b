@@ -138,6 +138,13 @@ class Utils {
             throw new IllegalArgumentException(excp.getMessage());
         }
     }
+    public static void writeContentsSafe(File file, Object... contents) {
+        try {
+            writeContents(file, contents);
+        } catch (IllegalArgumentException e) {
+            System.err.println("写入内容发生异常：" + e.getMessage());
+        }
+    }
 
     /** Return an object of type T read from FILE, casting it to EXPECTEDCLASS.
      *  Throws IllegalArgumentException in case of problems. */
@@ -157,7 +164,7 @@ class Utils {
 
     /** Write OBJ to FILE. */
     static void writeObject(File file, Serializable obj) {
-        writeContents(file, serialize(obj));
+        writeContentsSafe(file, serialize(obj));
     }
 
     /* DIRECTORIES */

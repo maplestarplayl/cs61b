@@ -20,18 +20,29 @@ public class Blob implements Serializable {
         return this.bytes;
     }
     public static Blob createBlob(File f){
-        byte[] bytes = Utils.readContents(f);
-        String strindex = Utils.sha1(bytes);
-        return new Blob(bytes,strindex);
 
+        try {
+            byte[] bytes = Utils.readContents(f);
+            String strindex = Utils.sha1(bytes);
+            // 处理读取到的对象
+            return new Blob(bytes, strindex);
+        } catch (IllegalArgumentException e) {
+            System.err.println("读取对象发生异常：" + e.getMessage());
+            return null;
+        }
     }
     public static Blob returnBlobByIndex(String index){
         File toberead = Utils.join(Repository.Objects,index);
         if (!toberead.exists()){
             return null;
         }
-        Blob b = Utils.readObject(toberead,Blob.class);
-        return b;
+        try {
+            Blob b = Utils.readObject(toberead,Blob.class);
+            return b;
+        } catch (IllegalArgumentException e) {
+            System.err.println("读取对象发生异常：" + e.getMessage());
+            return null;
+        }
     }
 
 

@@ -84,7 +84,7 @@ public class Commit implements Serializable{
             hash = Utils.sha1(bytee);
             f.delete();
         } catch (IOException e) {
-            // 处理 IOException 异常
+            System.err.println("读取文件发生异常：" + e.getMessage());
         }
 
     }
