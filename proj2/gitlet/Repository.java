@@ -127,6 +127,19 @@ public class Repository {
             return null;
         }
     }
+    public static Commit returnCommitByBranch(){
+        File[] branchname = Branches.listFiles();
+        for (File f :branchname){
+            String branchindex = Utils.readContentsAsString(f);
+            return returnCommitByIndex(branchindex);
+        }
+        return null;
+    }
+    public static Commit returnCommitBySpiltPoint(){
+        File spiltpoint = Utils.join(Branches,"spiltpoint");
+        String spiltpointindex = Utils.readContentsAsString(spiltpoint);
+        return returnCommitByIndex(spiltpointindex);
+    }
 
     public static void CommitSaveandUpdatePointer(Commit com, File f) {
         String index = com.getHash();
@@ -488,19 +501,22 @@ public class Repository {
     }
 
     public static void branch(String branchname) {
-        //创建 三个文件，flag,branch，branchlog。前者表示该branch是否激活，中者显示branch所指向的commit，后者表示该branch提交的记录
+        //创建四个文件，flag,branch，branchlog,spiltpoint。前者表示该branch是否激活，中者显示branch所指向的commit，后者表示该branch提交的记录，最后表示分裂点的commit（用于merge)
         File flagForIfChangeBranch = join(GITLET_DIR, "flag");
         File branch = join(Branches, branchname);
         File branchlog = join(GITLET_DIR, "branchlog");
+        File spiltpoint = join(Branches,"spiltpoint");
         if (branch.exists()) {
             Utils.exitWithMessage("A branch with that name already exists.");
         }
         Fileinitialize(flagForIfChangeBranch);
         Fileinitialize(branch);
         Fileinitialize(branchlog);
+        Fileinitialize(spiltpoint);
         // 将branch和head指向同一个commit
         String index = returnCommitByHead().getHash();
         Utils.writeContentsSafe(branch, index);
+        Utils.writeContentsSafe(spiltpoint,index);
 
     }
 
@@ -514,12 +530,15 @@ public class Repository {
             b.delete();
             File flagForIfChangeBranch = join(GITLET_DIR, "flag");
             File branchlog = join(GITLET_DIR, "branchlog");
+            File spiltpoint = join(GITLET_DIR,"spiltpoint");
             branchlog.delete();
             flagForIfChangeBranch.delete();
+            spiltpoint.delete();
         }
 
 
     }
+
 
     public static void HPDeleteStagingarea() {
         File[] addedfiles = Staging_add.listFiles();
@@ -532,7 +551,7 @@ public class Repository {
         }
     }
 
-    /**
+    /**Helper Method
      * Restore all files of the specified commit and delete files that tracked by other commits
      * REmove files from the staging area
      *
@@ -560,5 +579,153 @@ public class Repository {
         }
     }
 
+    public static boolean HPcheckIfHeadAtBranch(String branchname){
+        Commit Head = returnCommitByHead();
+        Commit branch = returnCommitByBranch();
+        Commit cur = branch;
+        while (cur != null){
+            if (cur != Head){
+                Commit parent = returnCommitByIndex(cur.parent);
+                cur = parent;
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
+    public static boolean HPcheckFileIfInSpilt(File f){
+        Commit spiltpoint = returnCommitBySpiltPoint();
+        Map<String,String> spiltpointmap = spiltpoint.treeDirectory.returnMap();
+        if (spiltpointmap.containsKey(f.getName())){
+            return true;
+        }
+        return false;
+    }
+    //Return filehash if file modified else return null
+    public static String checkFileIfModified(String filename,Commit com){
+        Commit spiltpoint = returnCommitBySpiltPoint();
+        Map<String,String> spiltpointmap = spiltpoint.treeDirectory.returnMap();
+        Map<String,String> commitmap = com.treeDirectory.returnMap();
+        if (commitmap.get(filename) != spiltpointmap.get(filename)){
+            return commitmap.get(filename);
+        }
+        return null;
+    }
+    public static void merge(String branchname) {
+        //deal with the failure cases
+        File branch = Utils.join(Branches, branchname);
+        if (!branch.exists()){
+            Utils.exitWithMessage("A branch with that name does not exist.");
+        }
+        if (HPcheckIfHeadAtBranch(branchname)){
+            Utils.exitWithMessage("Cannot merge a branch with itself.");
+        }
+        if (Staging_add.listFiles() != null || Staging_rem.listFiles() != null){
+            Utils.exitWithMessage("You have uncommitted changes.");
+        }
+        //7 cases of merge
+        //
+        //Get 3 commits by helper methods
+        Commit Head = returnCommitByHead();
+        Commit branches = returnCommitByBranch();
+        Commit spiltpoint = returnCommitBySpiltPoint();
 
+        //Process files in Head first:Case 2,3,4,6
+        File[] CWDfiles = CWD.listFiles();
+        Set<String> filenameset = new HashSet<>();
+        for (File f:CWDfiles){
+            filenameset.add(f.getName());
+        }
+        Map<String,String> Headmap = Head.treeDirectory.returnMap();
+        Map<String,String> branchmap = branches.treeDirectory.returnMap();
+        for (String filename : Headmap.keySet()){
+            File file = join(CWD,filename);
+            String headfilehash = checkFileIfModified(filename,Head);
+            //Case : 4 Not in spilt nor branch but in Head
+            if (!HPcheckFileIfInSpilt(file) && !branchmap.containsKey(filename)){
+                Repository.add(filename);
+                filenameset.remove(file.getName());
+            //Case (1) and 8 :Head unmodified
+            } else if(headfilehash == null &&branchmap.containsKey(filename)){
+                //Case 8:Both unmodified
+                String branchfilehash = checkFileIfModified(filename,branches);
+                if (branchfilehash == null){
+                    Repository.add(filename);
+                    filenameset.remove(file.getName());
+                }
+                else{
+                    ;
+                }
+            //Case 6:Head unmodified but not present in branch
+            } else if (headfilehash == null &&!branchmap.containsKey(filename)){
+                File copyRem = join(Staging_rem, filename);
+                filenameset.remove(file.getName());
+                try {
+                    Files.copy(file.toPath(), copyRem.toPath());
+                } catch (IOException excp) {
+                    System.out.println(excp.getMessage());
+                }
+            //Case 2 and 3:Head modified but branch unmodified/modified
+            } else if (headfilehash != null && branchmap.containsKey(filename)){
+                String branchfilehash = checkFileIfModified(filename,branches);
+                //Case 2:Head modified but branch unmodified
+                if (branchfilehash == null){
+                    Repository.add(filename);
+                    filenameset.remove(file.getName());
+                }
+                //Case 3:Both modified in same way
+                else if(branchfilehash.equals(headfilehash)){
+                    Repository.add(filename);
+                    filenameset.remove(file.getName());
+                }
+                /**To be continued:
+                   Case 3 :Both modified but in different way
+                 */
+                else{
+
+                }
+             //Case 9 : Head modified but not present in other
+            } else if (headfilehash != null && !branchmap.containsKey(filename)){
+                File copyRem = join(Staging_rem, filename);
+                filenameset.remove(file.getName());
+                try {
+                    Files.copy(file.toPath(), copyRem.toPath());
+                } catch (IOException excp) {
+                    System.out.println(excp.getMessage());
+                }
+            }
+        }
+
+        //Process branch then
+        //Case 1 : Modified in branch but not in Head
+        Repository.checkoutNewBranch(branchname);
+        for (String filename :filenameset){
+            Repository.add(filename);
+        }
+
+
+        Set<File> fileset = new HashSet<>();
+        File[] CWDfile = CWD.listFiles();
+        fileset.addAll(Arrays.asList(CWDfile));
+        //Remove files appeared in Head
+        fileset.removeIf(f -> Headmap.containsKey(f.getName()));
+        for (File f:fileset){
+            //Case 5:not in spilt nor Head but in branch
+            if (!HPcheckFileIfInSpilt(f)){
+                Repository.add(f.getName());
+                fileset.remove(f);
+            }
+            //Case 7:unmodified in branch but not present in Head
+            else if (checkFileIfModified(f.getName(),branches) == null){
+                ;
+            }
+            //Case 10: modified in branch but not present in Head
+            else {
+                Repository.add(f.getName());
+                fileset.remove(f);
+            }
+        }
+        Repository.commit("This is a merge commit.");
+
+    }
 }

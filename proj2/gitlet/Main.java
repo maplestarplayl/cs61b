@@ -105,8 +105,13 @@ public class Main {
                 break;
             case "reset":
                 validateAtaRepo();
-                validateNumArgs(args,1);
+                validateNumArgs(args,2);
                 Repository.reset(args[1]);
+                break;
+            case "merge":
+                validateAtaRepo();
+                validateNumArgs(args,2);
+                Repository.merge(args[1]);
                 break;
         }
     }
