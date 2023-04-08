@@ -24,10 +24,10 @@ public class Blob implements Serializable {
         try {
             byte[] bytes = Utils.readContents(f);
             String strindex = Utils.sha1(bytes);
-            // 处理读取到的对象
+
             return new Blob(bytes, strindex);
         } catch (IllegalArgumentException e) {
-            System.err.println("读取对象发生异常：" + e.getMessage());
+            System.err.println("Exception of reading Objects:" + e.getMessage());
             return null;
         }
     }
@@ -40,7 +40,7 @@ public class Blob implements Serializable {
             Blob b = Utils.readObject(toberead,Blob.class);
             return b;
         } catch (IllegalArgumentException e) {
-            System.err.println("读取对象发生异常：" + e.getMessage());
+            System.err.println("Exception of reading Objects:" + e.getMessage());
             return null;
         }
     }

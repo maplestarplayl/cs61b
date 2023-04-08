@@ -90,10 +90,13 @@ public class Repository {
         return GITLET_DIR.exists();
     }
 
-    public static boolean checkIfNotExistAdd() {
+    public static boolean checkIfNotExistAddAndRem() {
         if (Staging_add.delete()) {
             Staging_add.mkdir();
-            return true;
+            if (Staging_rem.delete()){
+                Staging_rem.mkdir();
+                return true;
+            }
         }
         return false;
     }
@@ -108,7 +111,7 @@ public class Repository {
             Commit com = Utils.readObject(commit, gitlet.Commit.class);
             return com;
         } catch (IllegalArgumentException e){
-            System.err.println("读取对象发生异常：" + e.getMessage());
+            System.err.println("Exception of reading Objects:" + e.getMessage());
             return null;
         }
     }
@@ -123,7 +126,7 @@ public class Repository {
             Commit com = Utils.readObject(commit, gitlet.Commit.class);
             return com;
         } catch (IllegalArgumentException e){
-            System.err.println("读取对象发生异常：" + e.getMessage());
+            System.err.println("Exception of reading Objects:" + e.getMessage());
             return null;
         }
     }
@@ -136,7 +139,7 @@ public class Repository {
         return null;
     }
     public static Commit returnCommitBySpiltPoint(){
-        File spiltpoint = Utils.join(Branches,"spiltpoint");
+        File spiltpoint = Utils.join(GITLET_DIR,"spiltpoint");
         String spiltpointindex = Utils.readContentsAsString(spiltpoint);
         return returnCommitByIndex(spiltpointindex);
     }
@@ -167,6 +170,10 @@ public class Repository {
         String finalres = last + identifier + firstline + secondline + thirdline + "\n";
         Utils.writeContentsSafe(toberecord, finalres);
     }
+    public static boolean checkIfFileInCommit(String filename,Commit com){
+        Map<String,String> map = com.treeDirectory.returnMap();
+        return map.containsKey(filename);
+    }
 
     public static void Fileinitialize(File f) {
         try {
@@ -178,6 +185,12 @@ public class Repository {
             System.out.println(excp.getMessage());
         }
     }
+    public static void Directoryitialize(File f){
+        if (!f.exists()){
+            f.mkdir();
+        }
+        return;
+    }
 
     public static boolean checkIfFileEqualGivenCommit(String name, Commit com) {
         File cur = join(CWD, name);
@@ -187,12 +200,12 @@ public class Repository {
             try {
                 byte[] bytee = Utils.readContents(cur);
                 String curindex = Utils.sha1(bytee);
-                // 处理读取到的对象
+
                 if (oriindex.equals(curindex)) {
                     return true;
                 }
             } catch (IllegalArgumentException e) {
-                System.err.println("读取对象发生异常：" + e.getMessage());
+                System.err.println("Exception of reading Objects:" + e.getMessage());
             }
 
         }
@@ -204,9 +217,12 @@ public class Repository {
      */
     public static boolean checkIfAtBranch() {
         File flag = join(GITLET_DIR, "flag");
-        Fileinitialize(flag);
-        String val = Utils.readContentsAsString(flag);
-        if (val.equals("true")) {
+
+
+        if (!flag.exists()){
+            return false;
+        }
+        else if (Utils.readContentsAsString(flag).equals("true")) {
             return true;
         } else {
             return false;
@@ -291,7 +307,7 @@ public class Repository {
         } else {
             File toberead = join(GITLET_DIR, "branchlog");
             String res = Utils.readContentsAsString(toberead);
-            System.out.println(toberead);
+            System.out.println(res);
         }
     }
 
@@ -351,9 +367,9 @@ public class Repository {
     }
 
     /**
-     * 用途 ： 切换到新的分支
-     * 实现方式： 由两部分构成，第一部分是设置flag来对是否是branch进行锚定
-     * 第二部分，将要切换的分支的节点的文件覆盖当前的文件，还要更新head指针
+     * Usage : checkout new branch
+     * Method of implementation : Be made up of two parts, the first is to set a flag to make sure if at branch
+     * Second part,override the files in the CWD with the checkout-commit's files,also need to update the pointer
      */
     public static void checkoutNewBranch(String branchname) {
         File flag = join(GITLET_DIR, "flag");
@@ -454,12 +470,21 @@ public class Repository {
         }
         // Branches
         System.out.println("=== Branches ===");
-        System.out.println("*master");
-        //Print out names of each branch
-        File[] branchfiles = Branches.listFiles();
-        for (File f : branchfiles) {
-            System.out.println(f.getName());
+        if (!checkIfAtBranch()){
+            System.out.println("*master");
+            //Print out names of each branch
+            File[] branchfiles = Branches.listFiles();
+            for (File f : branchfiles) {
+                System.out.println(f.getName());
+            }
+        }else {
+            System.out.println("master");
+            File[] branchfiles = Branches.listFiles();
+            for (File f : branchfiles) {
+                System.out.println("*"+f.getName());
+            }
         }
+
         //Staged files
         System.out.println("=== Staged Files ===");
         File[] stagedFiles = Staging_add.listFiles();
@@ -501,11 +526,11 @@ public class Repository {
     }
 
     public static void branch(String branchname) {
-        //创建四个文件，flag,branch，branchlog,spiltpoint。前者表示该branch是否激活，中者显示branch所指向的commit，后者表示该branch提交的记录，最后表示分裂点的commit（用于merge)
+        //Create 4 Files，flag,branch，branchlog,spiltpoint.The first represents branch is actived,secong shows branch's commit,third shows branch's commit log，Finally shows spiltpoint's commit
         File flagForIfChangeBranch = join(GITLET_DIR, "flag");
         File branch = join(Branches, branchname);
         File branchlog = join(GITLET_DIR, "branchlog");
-        File spiltpoint = join(Branches,"spiltpoint");
+        File spiltpoint = join(GITLET_DIR,"spiltpoint");
         if (branch.exists()) {
             Utils.exitWithMessage("A branch with that name already exists.");
         }
@@ -583,7 +608,7 @@ public class Repository {
         Commit Head = returnCommitByHead();
         Commit branch = returnCommitByBranch();
         Commit cur = branch;
-        while (cur != null){
+        while (cur.parent != null){
             if (cur != Head){
                 Commit parent = returnCommitByIndex(cur.parent);
                 cur = parent;
@@ -620,7 +645,7 @@ public class Repository {
         if (HPcheckIfHeadAtBranch(branchname)){
             Utils.exitWithMessage("Cannot merge a branch with itself.");
         }
-        if (Staging_add.listFiles() != null || Staging_rem.listFiles() != null){
+        if (!checkIfNotExistAddAndRem()){
             Utils.exitWithMessage("You have uncommitted changes.");
         }
         //7 cases of merge
@@ -634,12 +659,18 @@ public class Repository {
         File[] CWDfiles = CWD.listFiles();
         Set<String> filenameset = new HashSet<>();
         for (File f:CWDfiles){
+            if (f.isDirectory()){
+                continue;
+            }
             filenameset.add(f.getName());
         }
         Map<String,String> Headmap = Head.treeDirectory.returnMap();
         Map<String,String> branchmap = branches.treeDirectory.returnMap();
         for (String filename : Headmap.keySet()){
             File file = join(CWD,filename);
+            if (file.isDirectory()){
+                continue;
+            }
             String headfilehash = checkFileIfModified(filename,Head);
             //Case : 4 Not in spilt nor branch but in Head
             if (!HPcheckFileIfInSpilt(file) && !branchmap.containsKey(filename)){
@@ -678,11 +709,19 @@ public class Repository {
                     Repository.add(filename);
                     filenameset.remove(file.getName());
                 }
-                /**To be continued:
+                /**To be continued: add content into the conflicted file
                    Case 3 :Both modified but in different way
                  */
                 else{
-
+                    File conflictflag = Utils.join(Branches,"conflictflag");
+                    //Check if file has been committed
+                    if (conflictflag.exists() && checkIfFileInCommit(filename,Head)){
+                        ;
+                    }
+                    else{
+                        Fileinitialize(conflictflag);
+                        Utils.exitWithMessage("Encountered a merge conflict.");
+                    }
                 }
              //Case 9 : Head modified but not present in other
             } else if (headfilehash != null && !branchmap.containsKey(filename)){
@@ -710,10 +749,12 @@ public class Repository {
         //Remove files appeared in Head
         fileset.removeIf(f -> Headmap.containsKey(f.getName()));
         for (File f:fileset){
+            if (f.isDirectory()){
+                continue;
+            }
             //Case 5:not in spilt nor Head but in branch
             if (!HPcheckFileIfInSpilt(f)){
                 Repository.add(f.getName());
-                fileset.remove(f);
             }
             //Case 7:unmodified in branch but not present in Head
             else if (checkFileIfModified(f.getName(),branches) == null){
@@ -722,9 +763,9 @@ public class Repository {
             //Case 10: modified in branch but not present in Head
             else {
                 Repository.add(f.getName());
-                fileset.remove(f);
             }
         }
+        Repository.checkoutNewBranch("master");
         Repository.commit("This is a merge commit.");
 
     }

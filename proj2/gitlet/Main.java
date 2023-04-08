@@ -45,7 +45,7 @@ public class Main {
                 validateNumArgs(args,2);
                 validateAtaRepo();
                 String message = args[1];
-                if (Repository.checkIfNotExistAdd()){
+                if (Repository.checkIfNotExistAddAndRem()){
                     System.out.println("No changes added to the commit.");
                     return;
                 }
